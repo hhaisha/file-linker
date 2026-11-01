@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "collections": [
+    {
+      "id": "item_001",
+      "name": "Работа",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    }
+  ]
+}
