@@ -6,6 +6,32 @@ import os
 from tkinter import Tk, filedialog
 
 
+def get_item_icon(item):
+    """Возвращает иконку Flet в зависимости от типа и расширения файла."""
+    t = item.get("type")
+    if t == "subfolder":
+        return ft.Icon(ft.Icons.FOLDER, size=40, color=Colors.BLUE_400)
+    elif t == "url":
+        return ft.Icon(ft.Icons.LINK, size=40, color=Colors.GREEN_400)
+    elif t == "note":
+        return ft.Icon(ft.Icons.NOTE, size=40, color=Colors.YELLOW_400)
+    elif t == "file":
+        ext = os.path.splitext(item.get("name", ""))[1].lower()
+        if ext == ".pdf":
+            return ft.Icon(ft.Icons.PICTURE_AS_PDF, size=40, color=Colors.RED_400)
+        elif ext in [".jpg", ".jpeg", ".png", ".gif"]:
+            return ft.Icon(ft.Icons.IMAGE, size=40, color=Colors.PURPLE_300)
+        elif ext in [".doc", ".docx"]:
+            return ft.Icon(ft.Icons.DESCRIPTION, size=40, color=Colors.BLUE_300)
+        elif ext in [".xls", ".xlsx"]:
+            return ft.Icon(ft.Icons.TABLE_CHART, size=40, color=Colors.GREEN_300)
+        elif ext in [".zip", ".rar", ".7z"]:
+            return ft.Icon(ft.Icons.ARCHIVE, size=40, color=Colors.ORANGE_300)
+        else:
+            return ft.Icon(ft.Icons.INSERT_DRIVE_FILE, size=40, color=Colors.GREY_400)
+    return ft.Icon(ft.Icons.HELP_OUTLINE, size=40)
+
+
 def run():
     def main(page: ft.Page):
         page.title = "File Linker"
@@ -14,21 +40,21 @@ def run():
 
         data = load_data()
         current_folder = None
+        folder_path = []
 
-        folders_list = ft.ListView(expand=1, spacing=5, padding=10)
+        folders_list = ft.ListView(expand=1, spacing=2, padding=10)
         items_grid = ft.GridView(expand=1, runs_count=6, max_extent=120, child_aspect_ratio=1.0, spacing=10,
                                  run_spacing=10, padding=10)
-
         current_folder_title = ft.Text("Выберите папку слева", size=20, weight=ft.FontWeight.BOLD)
 
-        add_root_folder_btn = ft.Button("📁 Создать папку", icon=ft.Icons.CREATE_NEW_FOLDER,
+        add_root_folder_btn = ft.Button("Создать папку", icon=ft.Icons.CREATE_NEW_FOLDER,
                                         style=ft.ButtonStyle(color=Colors.WHITE, bgcolor=Colors.BLUE_700))
-        add_subfolder_btn = ft.Button("📁 Создать подпапку", icon=ft.Icons.CREATE_NEW_FOLDER,
+        add_subfolder_btn = ft.Button("Создать подпапку", icon=ft.Icons.CREATE_NEW_FOLDER,
                                       style=ft.ButtonStyle(color=Colors.WHITE, bgcolor=Colors.INDIGO_700),
                                       disabled=True)
-        add_item_btn = ft.Button("➕ Добавить элемент", icon=ft.Icons.ADD,
+        add_item_btn = ft.Button("Добавить элемент", icon=ft.Icons.ADD,
                                  style=ft.ButtonStyle(color=Colors.WHITE, bgcolor=Colors.GREEN_700), disabled=True)
-        back_btn = ft.IconButton(icon=ft.Icons.ARROW_BACK, tooltip="Вернуться на главную", visible=False)
+        back_btn = ft.IconButton(icon=ft.Icons.ARROW_BACK, tooltip="Назад", visible=False)
 
         def show_dialog(dlg):
             page.overlay.append(dlg)
@@ -39,27 +65,74 @@ def run():
             dlg.open = False
             page.update()
 
-        def render_folders():
+        # --- Дерево папок ---
+        def build_tree_items(items, parent_id=""):
+            controls = []
+            for item in items:
+                is_folder = item.get("type") == "subfolder"
+                icon = ft.Icons.FOLDER if is_folder else ft.Icons.INSERT_DRIVE_FILE
+
+                if is_folder:
+                    children = build_tree_items(item.get("items", []), f"{parent_id}/{item['id']}")
+
+                    title_gesture = ft.GestureDetector(
+                        content=ft.Text(item["name"]),
+                        on_secondary_tap=lambda e, it=item: show_folder_menu(it, is_root=False)
+                    )
+
+                    tile = ft.ExpansionTile(
+                        title=title_gesture,
+                        leading=ft.Icon(icon, color=Colors.BLUE_400),
+                        controls=children if children else [ft.ListTile(title=ft.Text("Пусто", color=Colors.GREY))],
+                        data=item,
+                        on_change=lambda e, it=item: on_tree_select(it)
+                    )
+                    controls.append(tile)
+                else:
+                    tile = ft.ListTile(
+                        title=ft.Text(item["name"], size=12),
+                        leading=ft.Icon(icon, size=20, color=Colors.GREY_400),
+                        data=item,
+                        on_click=lambda e, it=item: on_tree_select(it)
+                    )
+                    controls.append(tile)
+            return controls
+
+        def render_tree():
             folders_list.controls.clear()
             for coll in data["collections"]:
-                tile = ft.ListTile(
-                    leading=ft.Text(coll["icon"], size=24),
-                    title=ft.Text(coll["name"], weight=ft.FontWeight.W_500),
-                    subtitle=ft.Text(f"{len(coll['items'])} элементов", size=12),
+                children = build_tree_items(coll.get("items", []), f"/{coll['id']}")
+
+                title_gesture = ft.GestureDetector(
+                    content=ft.Text(coll["name"]),
+                    on_secondary_tap=lambda e, c=coll: show_folder_menu(c, is_root=True)
+                )
+
+                root_tile = ft.ExpansionTile(
+                    title=title_gesture,
+                    leading=ft.Icon(ft.Icons.FOLDER, color=Colors.BLUE_400),
+                    controls=children if children else [ft.ListTile(title=ft.Text("Пусто", color=Colors.GREY))],
                     data=coll,
-                    on_click=on_folder_click
+                    on_change=lambda e, c=coll: on_tree_select(c)
                 )
-                folders_list.controls.append(
-                    ft.GestureDetector(
-                        content=tile,
-                        on_secondary_tap=lambda e, c=coll: show_folder_menu(c, is_root=True)
-                    )
-                )
+                folders_list.controls.append(root_tile)
             page.update()
 
-        def render_items(folder):
+        def on_tree_select(item):
+            is_subfolder = item.get("type") == "subfolder"
+            is_root = "items" in item and item.get("type") is None
+
+            if is_subfolder or is_root:
+                render_items(item, add_to_history=True)
+
+        # --- Отрисовка Элементов (Правая панель) ---
+        def render_items(folder, add_to_history=False):
             nonlocal current_folder
             current_folder = folder
+
+            if add_to_history and folder:
+                if not folder_path or folder_path[-1] != folder:
+                    folder_path.append(folder)
 
             if folder is None:
                 current_folder_title.value = "Выберите папку слева"
@@ -69,39 +142,24 @@ def run():
                 items_grid.controls.clear()
                 items_grid.controls.append(ft.Text("Справа будут отображаться файлы", color=Colors.GREY_600))
             else:
-                current_folder_title.value = f"{folder.get('icon', '📁')} {folder['name']}"
-                back_btn.visible = True
+                current_folder_title.value = folder['name']
+                back_btn.visible = True if folder_path else False
                 add_subfolder_btn.disabled = False
                 add_item_btn.disabled = False
 
                 items_grid.controls.clear()
                 if not folder["items"]:
-                    items_grid.controls.append(
-                        ft.Text("Папка пуста. Добавьте файлы или подпапки.", color=Colors.GREY_500))
+                    items_grid.controls.append(ft.Text("Папка пуста.", color=Colors.GREY_500))
                 else:
                     for item in folder["items"]:
-                        # ИСПРАВЛЕНИЕ 1: Берем иконку из данных элемента, если она есть
-                        icon = item.get("icon")
-
-                        if not icon:
-                            icon = "📄"
-                            if item["type"] == "url":
-                                icon = "🌐"
-                            elif item["type"] == "note":
-                                icon = "📌"
-                            elif item["type"] == "subfolder":
-                                icon = "📁"
-
                         card_content = ft.Container(
                             content=ft.Column([
-                                ft.Text(icon, size=40),
+                                get_item_icon(item),
                                 ft.Text(item.get("name", "Без имени"), size=12, text_align=ft.TextAlign.CENTER,
                                         max_lines=2, overflow=ft.TextOverflow.ELLIPSIS)
                             ], alignment=ft.MainAxisAlignment.CENTER,
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                            bgcolor=Colors.GREY_800,
-                            border_radius=8,
-                            padding=10,
+                            bgcolor=Colors.GREY_800, border_radius=8, padding=10,
                         )
 
                         card = ft.GestureDetector(
@@ -112,22 +170,26 @@ def run():
                         items_grid.controls.append(card)
             page.update()
 
-        def on_folder_click(e):
-            render_items(e.control.data)
-
-        def go_back(e):
-            render_items(None)
-
         def handle_open(item):
-            if item["type"] == "subfolder":
-                render_items(item)
-            elif item["type"] == "note":
+            if item.get("type") == "subfolder":
+                render_items(item, add_to_history=True)
+            elif item.get("type") == "note":
                 dlg = ft.AlertDialog(title=ft.Text(item.get("name", "Заметка")),
                                      content=ft.Text(item.get("body", "Пусто")))
                 show_dialog(dlg)
             else:
                 open_item(item)
 
+        def go_back(e):
+            if folder_path:
+                folder_path.pop()
+            if folder_path:
+                parent = folder_path.pop()
+                render_items(parent, add_to_history=True)
+            else:
+                render_items(None)
+
+        # --- Контекстные меню ---
         def show_folder_menu(folder, is_root=False):
             def edit_click(e):
                 close_dialog(menu_dlg)
@@ -138,9 +200,9 @@ def run():
                 if is_root:
                     delete_folder(data, folder["id"])
                     if current_folder and current_folder["id"] == folder["id"]:
-                        go_back(None)
+                        render_items(None)
                     save_data(data)
-                    render_folders()
+                    render_tree()
                 else:
                     confirm_delete_item(folder)
 
@@ -157,7 +219,7 @@ def run():
         def show_item_menu(item):
             def edit_click(e):
                 close_dialog(menu_dlg)
-                show_edit_dialog(item, is_folder=(item["type"] == "subfolder"))
+                show_edit_dialog(item, is_folder=(item.get("type") == "subfolder"))
 
             def open_click(e):
                 close_dialog(menu_dlg)
@@ -182,43 +244,18 @@ def run():
         def show_left_empty_menu(e):
             show_create_folder_dialog(is_subfolder=False)
 
-        def show_right_empty_menu(e):
-            if not current_folder: return
-
-            def create_folder_click(ev):
-                close_dialog(menu_dlg)
-                show_create_folder_dialog(is_subfolder=True)
-
-            def add_item_click(ev):
-                close_dialog(menu_dlg)
-                show_add_item_dialog(None)
-
-            menu_dlg = ft.AlertDialog(
-                title=ft.Text("Действия в папке"),
-                content=ft.Column([
-                    ft.ListTile(leading=ft.Icon(ft.Icons.CREATE_NEW_FOLDER), title=ft.Text("Создать подпапку"),
-                                on_click=create_folder_click),
-                    ft.ListTile(leading=ft.Icon(ft.Icons.ADD), title=ft.Text("Добавить элемент (файл/ссылку)"),
-                                on_click=add_item_click),
-                ], tight=True),
-            )
-            show_dialog(menu_dlg)
-
         def confirm_delete_item(item):
             def delete_yes(e):
                 if current_folder:
                     remove_item(current_folder, item["id"])
-                    if current_folder["id"] == item["id"]:
-                        go_back(None)
-                    else:
-                        render_items(current_folder)
-                save_data(data)
-                render_folders()
+                    save_data(data)
+                    render_items(current_folder)
+                    render_tree()
                 close_dialog(dlg)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Удалить?"),
-                content=ft.Text("Элемент удалится из программы (оригинал на диске останется)."),
+                content=ft.Text("Элемент удалится из программы."),
                 actions=[
                     ft.TextButton("Отмена", on_click=lambda e: close_dialog(dlg)),
                     ft.FilledButton("Удалить", on_click=delete_yes, style=ft.ButtonStyle(bgcolor=Colors.RED_700)),
@@ -226,37 +263,21 @@ def run():
             )
             show_dialog(dlg)
 
+        # --- Создание папки (без эмодзи) ---
         def show_create_folder_dialog(e=None, is_subfolder=False):
             name_input = ft.TextField(label="Название папки", autofocus=True)
-            icon_input = ft.Dropdown(
-                label="Иконка", value="📁",
-                options=[
-                    ft.dropdown.Option("📁", "📁 Папка"),
-                    ft.dropdown.Option("💼", "💼 Работа"),
-                    ft.dropdown.Option("📚", "📚 Учёба"),
-                    ft.dropdown.Option("🎬", "🎬 Видео"),
-                    ft.dropdown.Option("⭐", "⭐ Избранное"),
-                ]
-            )
 
             def save_folder(ev):
-                if not name_input.value:
-                    name_input.error_text = "Введите название"
-                    page.update()
-                    return
-
-                create_folder(data, current_folder if is_subfolder else None, name_input.value, icon_input.value)
+                if not name_input.value: return
+                create_folder(data, current_folder if is_subfolder else None, name_input.value)
                 save_data(data)
-
-                if is_subfolder:
-                    render_items(current_folder)
-                else:
-                    render_folders()
+                if is_subfolder: render_items(current_folder)
+                render_tree()
                 close_dialog(dlg)
 
             dlg = ft.AlertDialog(
                 title=ft.Text("Создать подпапку" if is_subfolder else "Создать папку"),
-                content=ft.Column([name_input, icon_input], tight=True, width=300),
+                content=ft.Column([name_input], tight=True, width=300),
                 actions=[
                     ft.TextButton("Отмена", on_click=lambda e: close_dialog(dlg)),
                     ft.FilledButton("Создать", on_click=save_folder),
@@ -318,7 +339,7 @@ def run():
 
                 save_data(data);
                 render_items(current_folder);
-                render_folders();
+                render_tree();
                 close_dialog(dlg)
 
             dlg = ft.AlertDialog(
@@ -329,6 +350,7 @@ def run():
             )
             show_dialog(dlg)
 
+        # --- Редактирование (без эмодзи) ---
         def show_edit_dialog(item, is_folder=False):
             name_input = ft.TextField(label="Название", value=item.get("name", ""))
             body_input = ft.TextField(label="Текст", multiline=True, min_lines=3,
@@ -338,12 +360,13 @@ def run():
                 item["name"] = name_input.value
                 if body_input: item["body"] = body_input.value
                 save_data(data)
-
-                render_folders()
+                render_tree()
                 if current_folder: render_items(current_folder)
                 close_dialog(dlg)
 
-            content = [name_input, body_input] if body_input else [name_input]
+            content = [name_input]
+            if body_input: content.append(body_input)
+
             dlg = ft.AlertDialog(
                 title=ft.Text("Редактировать"),
                 content=ft.Column(content, tight=True),
@@ -357,14 +380,14 @@ def run():
         add_item_btn.on_click = show_add_item_dialog
         back_btn.on_click = go_back
 
-        render_folders()
+        render_tree()
 
         page.add(
             ft.Column([
                 ft.Row([
                     ft.Container(
                         content=ft.Column([
-                            ft.Text("ПАПКИ", size=14, weight=ft.FontWeight.BOLD, color=Colors.GREY_400,
+                            ft.Text("ДЕРЕВО ПАПОК", size=14, weight=ft.FontWeight.BOLD, color=Colors.GREY_400,
                                     margin=Padding.only(left=10, top=10)),
                             ft.GestureDetector(
                                 content=ft.Container(content=folders_list, expand=True),
@@ -382,10 +405,7 @@ def run():
                                 current_folder_title,
                             ], alignment=ft.MainAxisAlignment.START, spacing=10, height=50),
                             ft.Divider(height=1),
-                            ft.GestureDetector(
-                                content=ft.Container(content=items_grid, expand=True),
-                                on_secondary_tap=show_right_empty_menu
-                            )
+                            ft.Container(content=items_grid, expand=True)
                         ]),
                         expand=True,
                         bgcolor=Colors.SURFACE_CONTAINER_LOWEST,

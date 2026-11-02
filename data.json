@@ -60,6 +60,14 @@
       "color": "#4A90E2",
       "description": "",
       "items": []
+    },
+    {
+      "id": "item_004",
+      "name": "fff",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
     }
   ]
 }
