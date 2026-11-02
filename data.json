@@ -15,51 +15,47 @@
       "icon": "📁",
       "color": "#4A90E2",
       "description": "",
-      "items": []
+      "items": [
+        {
+          "id": "item_001",
+          "type": "file",
+          "name": "Telegram Desktop",
+          "target": "C:\\Users\\haisha\\Downloads\\Telegram Desktop"
+        },
+        {
+          "id": "item_002",
+          "type": "file",
+          "name": "Telegram Desktop",
+          "target": "C:\\Users\\haisha\\Downloads\\Telegram Desktop"
+        },
+        {
+          "id": "item_003",
+          "type": "url",
+          "name": "https://www.google.com",
+          "target": "https://www.google.com"
+        },
+        {
+          "id": "item_004",
+          "name": "fffff",
+          "icon": "📁",
+          "color": "#4A90E2",
+          "description": "",
+          "items": [],
+          "type": "subfolder"
+        }
+      ]
     },
     {
       "id": "item_003",
-      "name": "Новая папка",
+      "name": "aaaa",
       "icon": "📁",
-      "color": "#4A90E2",
-      "description": "",
-      "items": []
-    },
-    {
-      "id": "item_004",
-      "name": "Новая папка",
-      "icon": "📁",
-      "color": "#4A90E2",
+      "color": "#904AE2",
       "description": "",
       "items": []
     },
     {
       "id": "item_005",
-      "name": "Новая папка",
-      "icon": "📁",
-      "color": "#4A90E2",
-      "description": "",
-      "items": []
-    },
-    {
-      "id": "item_006",
-      "name": "Новая папка",
-      "icon": "📁",
-      "color": "#4A90E2",
-      "description": "",
-      "items": []
-    },
-    {
-      "id": "item_007",
-      "name": "Новая папка",
-      "icon": "📁",
-      "color": "#4A90E2",
-      "description": "",
-      "items": []
-    },
-    {
-      "id": "item_008",
-      "name": "Новая папка",
+      "name": "fff",
       "icon": "📁",
       "color": "#4A90E2",
       "description": "",
