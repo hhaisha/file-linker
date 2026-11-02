@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "collections": [
+    {
+      "id": "item_001",
+      "name": "Работа",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    },
+    {
+      "id": "item_002",
+      "name": "Новая папка",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    },
+    {
+      "id": "item_003",
+      "name": "Новая папка",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    },
+    {
+      "id": "item_004",
+      "name": "Новая папка",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    },
+    {
+      "id": "item_005",
+      "name": "Новая папка",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    },
+    {
+      "id": "item_006",
+      "name": "Новая папка",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    },
+    {
+      "id": "item_007",
+      "name": "Новая папка",
+      "icon": "📁",
+      "color": "#4A90E2",
+      "description": "",
+      "items": []
+    }
+  ]
+}
